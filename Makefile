@@ -54,6 +54,7 @@ BBLAYERS ?= \
 	$(CURDIR)/openembedded-core/meta \
 	$(CURDIR)/meta-openpli \
 	$(CURDIR)/meta-dreambox \
+	$(CURDIR)/meta-xtrend \
 	$(CURDIR)/meta-qt5.15
 
 CONFFILES = \

@@ -1,0 +1,157 @@
+--- a/lib/python/Screens/InfoBarGenerics.py	
++++ b/lib/python/Screens/InfoBarGenerics.py
+@@ -322,8 +322,33 @@
+ 		self.__state = self.STATE_HIDDEN
+ 		if self.actualSecondInfoBarScreen:
+ 			self.actualSecondInfoBarScreen.hide()
++		self.resetAlpha()
+ 		for x in self.onShowHideNotifiers:
+ 			x(False)
++ 
++	def resetAlpha(self):
++		if config.usage.show_infobar_do_dimming.value:
++			self.unDimmingTimer = eTimer()
++			self.unDimmingTimer.callback.append(self.unDimming)
++			self.unDimmingTimer.start(300, True)
++
++	def doDimming(self):
++		if config.usage.show_infobar_do_dimming.value:
++			self.dimmed = int(int(self.dimmed) - 1)
++		else:
++			self.dimmed = 0
++		self.DimmingTimer.stop()
++		self.doHide()
++
++	def unDimming(self):
++		self.unDimmingTimer.stop()
++		self.doWriteAlpha(config.av.osd_alpha.value)
++
++	def doWriteAlpha(self, value):
++		if fileExists('/proc/stb/video/alpha'):
++			f = open('/proc/stb/video/alpha', 'w')
++			f.write('%i' % value)
++			f.close()
+ 
+ 	def toggleShowLong(self):
+ 		if not config.usage.ok_is_channelselection.value:
+@@ -386,8 +411,19 @@
+ 
+ 	def doTimerHide(self):
+ 		self.hideTimer.stop()
+-		if self.__state == self.STATE_SHOWN:
+-			self.hide()
++		self.DimmingTimer = eTimer()
++		self.DimmingTimer.callback.append(self.doDimming)
++		self.DimmingTimer.start(70, True)
++		self.dimmed = config.usage.show_infobar_dimming_speed.value
++
++	def doHide(self):
++		if self.__state != self.STATE_HIDDEN:
++			if self.dimmed > 0:
++				self.doWriteAlpha(int(int(config.av.osd_alpha.value) * int(self.dimmed) / int(config.usage.show_infobar_dimming_speed.value)))
++				self.DimmingTimer.start(5, True)
++			else:
++				self.DimmingTimer.stop()
++				self.hide()
+ 
+ 	def okButtonCheck(self):
+ 		if config.usage.ok_is_channelselection.value and hasattr(self, "openServiceList"):
+@@ -2983,6 +3019,23 @@
+ 		info = service and service.info()
+ 		return info and info.getInfo(iServiceInformation.sAspect) in WIDESCREEN
+ 
++	def PillarboxPanScanSelection(self):
++		self.vmodeChange('panscan')
++
++	def PillarboxScaleSelection(self):
++		self.vmodeChange('scale')
++
++	def vmodeChange(self, mode):
++		if config.av.policy_43.value == 'pillarbox':
++			config.av.policy_43.value = mode
++		else:
++			config.av.policy_43.value = 'pillarbox'
++		config.av.policy_43.save()
++		aspectratio = {'pillarbox': _('Pillarbox'),
++		 'panscan': _('Pan&scan'),
++		 'scale': _('Just scale')}
++		self.session.open(MessageBox, _('Display 4:3 content as') + '\n' + aspectratio[config.av.policy_43.value], MessageBox.TYPE_INFO, 2)
++
+ 
+ class InfoBarAdditionalInfo:
+ 	def __init__(self):
+@@ -3630,3 +3683,74 @@
+ 				self.session.nav.playService(slist.servicelist.getCurrent())
+ 			else:
+ 				self.session.nav.playService(self.cur_service)
++
++
++class InfoBarAspectSelection:
++	def __init__(self):
++		self["AspectSelectionAction"] = HelpableActionMap(self, "InfobarAspectSelectionActions",
++			{"aspectSelection": (self.ExGreen_toggleGreen, _("Aspect list..."))})
++
++		self["key_green"] = Boolean(True)
++		self["key_yellow"] = Boolean(True)
++		self["key_blue"] = Boolean(True)
++
++	def ExGreen_toggleGreen(self, arg=""):
++		self.aspectSelection()
++
++	def aspectSelection(self):
++		selection = 0
++		tlist = []
++		tlist.append((_("Resolution"), "resolution"))
++		tlist.append(("--", ""))
++		tlist.append(("Letterbox", "letterbox"))
++		tlist.append(("PanScan", "panscan"))
++		tlist.append(("Bestfit", "bestfit"))
++		mode = open("/proc/stb/video/policy").read()[:-1]
++		print (mode)
++		for x in range(len(tlist)):
++			if tlist[x][1] == mode:
++				selection = x
++
++		keys = ["green", "", "1", "2", "3", "4", "5", "6", "7", "8", "9" ]
++		self.session.openWithCallback(self.aspectSelected, ChoiceBox, title=_("Please select an aspect ratio..."), list = tlist, selection = selection, keys = keys)
++
++	def aspectSelected(self, aspect):
++		if not aspect is None:
++			if isinstance(aspect[1], str):
++				if aspect[1] == "resolution":
++					self.resolutionSelection()
++				else:
++					open("/proc/stb/video/policy", "w").write(aspect[1])
++
++	def resolutionSelection(self):
++		xresString = open("/proc/stb/vmpeg/0/xres", "r").read()
++		yresString = open("/proc/stb/vmpeg/0/yres", "r").read()
++		fpsString = open("/proc/stb/vmpeg/0/framerate", "r").read()
++		xres = int(xresString, 16)
++		yres = int(yresString, 16)
++		fps = int(fpsString, 16)
++		fpsFloat = float(fps)
++		fpsFloat = fpsFloat/1000
++		selection = 0
++		tlist = []
++		tlist.append((_("Exit"), "exit"))
++		tlist.append((_("Auto(not available)"), "auto"))
++		tlist.append(("Video: " + str(xres) + "x" + str(yres) + "@" + str(fpsFloat) + "hz", ""))
++		tlist.append(("--", ""))
++		for modes in reversed(open("/proc/stb/video/videomode_choices", "r").read()[:-1].split(' ')):
++			if not "pal" in modes and "p" in modes or "i" in modes:
++				tlist.append((modes.replace("p", "p@").replace("i", "i@"), modes))
++		keys = ["green", "yellow", "blue", "", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" ]
++		mode = open("/proc/stb/video/videomode").read()[:-1]
++		print (mode)
++		for x in range(len(tlist)):
++			if tlist[x][1] == mode:
++				selection = x
++
++		self.session.openWithCallback(self.ResolutionSelected, ChoiceBox, title=_("Please select a resolution..."), list = tlist, selection = selection, keys = keys)
++
++	def ResolutionSelected(self, Resolution):
++		if not Resolution is None:
++			if isinstance(Resolution[1], str):
++				if Resolution[1] != "auto":
++					open("/proc/stb/video/videomode", "w").write(Resolution[1])

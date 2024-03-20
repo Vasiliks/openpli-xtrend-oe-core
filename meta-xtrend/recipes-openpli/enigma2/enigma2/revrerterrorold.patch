@@ -1,0 +1,22 @@
+--- a/lib/base/ebase.cpp
++++ b/lib/base/ebase.cpp
+@@ -287,7 +287,7 @@ int eMainloop::processOneEvent(unsigned int twisted_timeout, PyObject **res, ePy
+ 					m_inActivate = 0;
+ 				}
+ 				if (pfd[i].revents & (POLLERR|POLLHUP|POLLNVAL))
+-					eLog(5, "[eMainloop::processOneEvent] unhandled POLLERR/HUP/NVAL for fd %d(%d)", pfd[i].fd, pfd[i].revents);
++					eDebug("[eMainloop::processOneEvent] unhandled POLLERR/HUP/NVAL for fd %d(%d)", pfd[i].fd, pfd[i].revents);
+ 			}
+ 		}
+ 		for (; i < fdcount; ++i)
+--- a/main/enigma.cpp
++++ b/main/enigma.cpp
+@@ -195,7 +195,7 @@
+ 	printf("DVB_API_VERSION %d DVB_API_VERSION_MINOR %d\n", DVB_API_VERSION, DVB_API_VERSION_MINOR);
+ 
+ 	// get enigma2 debug level settings
+-	debugLvl = getenv("ENIGMA_DEBUG_LVL") ? atoi(getenv("ENIGMA_DEBUG_LVL")) : 3;
++	debugLvl = getenv("ENIGMA_DEBUG_LVL") ? atoi(getenv("ENIGMA_DEBUG_LVL")) : 4;
+ 	if (debugLvl < 0)
+ 		debugLvl = 0;
+ 	printf("ENIGMA_DEBUG_LVL=%d\n", debugLvl);

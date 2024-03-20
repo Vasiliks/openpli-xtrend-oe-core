@@ -1,0 +1,5 @@
+do_configure:prepend () {       
+
+	sed -i 's/^UPDATE_HWCLOCK="no"/UPDATE_HWCLOCK="yes"/g' ${WORKDIR}/ntpdate.default
+}
+INSANE_SKIP_${PN} += "textrel"
