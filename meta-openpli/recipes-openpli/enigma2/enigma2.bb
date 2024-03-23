@@ -31,7 +31,6 @@ RDEPENDS:${PN} = " \
 	enigma2-remote \
 	ethtool \
 	glibc-gconv-iso8859-15 \
-	oe-alliance-branding \
 	${PYTHON_RDEPS} \
 	"
 
@@ -143,23 +142,25 @@ RRECOMMENDS:${PN} += "libdvdcss"
 # We depend on the font which we use for TXT subtitles (defined in skin_subtitles.xml)
 RDEPENDS:${PN} += "font-valis-enigma"
 
-RDEPENDS:${PN} += "virtual-blindscan-dvbc"
+RDEPENDS_${PN} += "${@bb.utils.contains("MACHINE_FEATURES", "blindscan-dvbc", "virtual/blindscan-dvbc" , "", d)}"
 
 DEMUXTOOL ?= "replex"
 
 DESCRIPTION:append:enigma2-plugin-extensions-cutlisteditor = "enables you to cut your movies."
-RDEPENDS:enigma2-plugin-extensions-cutlisteditor = "aio-grab"
 DESCRIPTION:append:enigma2-plugin-extensions-graphmultiepg = "shows a graphical timeline EPG."
 DESCRIPTION:append:enigma2-plugin-extensions-pictureplayer = "displays photos on the TV."
 DESCRIPTION:append:enigma2-plugin-systemplugins-positionersetup = "helps you installing a motorized dish."
 DESCRIPTION:append:enigma2-plugin-systemplugins-satelliteequipmentcontrol = "allows you to fine-tune DiSEqC-settings."
 DESCRIPTION:append:enigma2-plugin-systemplugins-satfinder = "helps you to align your dish."
 DESCRIPTION:append:enigma2-plugin-systemplugins-videomode = "selects advanced video modes"
+DESCRIPTION:append:enigma2-plugin-systemplugins-wirelesslan = "helps you configuring your wireless lan"
+DESCRIPTION:append:enigma2-plugin-systemplugins-networkwizard = "provides easy step by step network configuration"
+
+RDEPENDS:enigma2-plugin-extensions-cutlisteditor = "aio-grab"
 RDEPENDS:enigma2-plugin-systemplugins-nfiflash = "python3-twisted"
 RDEPENDS:enigma2-plugin-systemplugins-softwaremanager = "python3-twisted"
-DESCRIPTION:append:enigma2-plugin-systemplugins-wirelesslan = "helps you configuring your wireless lan"
 RDEPENDS:enigma2-plugin-systemplugins-wirelesslan = "wpa-supplicant wireless-tools python3-wifi"
-DESCRIPTION:append:enigma2-plugin-systemplugins-networkwizard = "provides easy step by step network configuration"
+
 # Note that these tools lack recipes
 RDEPENDS:enigma2-plugin-extensions-dvdburn = "dvd+rw-tools dvdauthor mjpegtools cdrkit ${DEMUXTOOL}"
 RDEPENDS:enigma2-plugin-systemplugins-hotplug = "hotplug-e2-helper"
@@ -181,7 +182,17 @@ PKGV = "${PYTHON_BASEVERSION}+git${GITPKGV}"
 ENIGMA2_BRANCH ?= "develop"
 GITHUB_URI ?= "git://github.com"
 
-SRC_URI = "${GITHUB_URI}/fairbird/enigma2-dreambox.git;branch=${ENIGMA2_BRANCH};protocol=https"
+SRC_URI = "${GITHUB_URI}/OpenPLi/enigma2.git;branch=${ENIGMA2_BRANCH};protocol=https \
+			file://01-use-ioctl-22-for-h265.patch \
+			file://03-add-support-2160p.patch \
+			file://06-fix-build-gcc11.patch \
+			file://07-suppress-deprecated-declarations.patch \
+			file://10-remove-codeset.patch \
+			file://12-make-lnb-variable-static.patch \
+			file://22-fix-build-largefile-and-64bit-time-t.patch \
+			file://23-add-sys-dvbc2.patch \
+"
+
 
 LDFLAGS:prepend = " -lxml2 "
 
@@ -204,6 +215,7 @@ def get_crashaddr(d):
     else:
         return ''
 
+
 EXTRA_OECONF = "\
 	--with-libsdl=no --with-boxtype=${MACHINE} \
 	--enable-dependency-tracking \
@@ -212,8 +224,9 @@ EXTRA_OECONF = "\
 	BUILD_SYS=${BUILD_SYS} \
 	HOST_SYS=${HOST_SYS} \
 	STAGING_INCDIR=${STAGING_INCDIR} \
-	STAGING_LIBDIR=${STAGING_LIBDIR} \
-	${@bb.utils.contains("MACHINE_FEATURES", "textlcd", "--with-textlcd" , "", d)} \
+	STAGING_LIBDIR=${STAGING_LIBDIR} \   
+	${@bb.utils.contains("MACHINE_FEATURES", "textlcd", "--with-textlcd" , "", d)} \ 
+	${@bb.utils.contains("MACHINE_FEATURES", "7segment", "--with-7segment" , "", d)} \
 	${@bb.utils.contains("MACHINE_FEATURES", "colorlcd", "--with-colorlcd" , "", d)} \
 	${@bb.utils.contains("MACHINE_FEATURES", "colorlcd128", "--with-colorlcd128" , "", d)} \
 	${@bb.utils.contains("MACHINE_FEATURES", "colorlcd240", "--with-colorlcd240" , "", d)} \
@@ -232,26 +245,6 @@ EXTRA_OEMAKE = "\
 FILES:${PN}-dbg += "\
 	${libdir}/enigma2/python/enigma.py \
 	${libdir}/enigma2/python/Plugins/*/*/.debug \
-	"
-
-# Save some space by not installing sources (StartEnigma.py must remain)
-FILES:${PN}-src = "\
-	${libdir}/enigma2/python/e2reactor.py \
-	${libdir}/enigma2/python/enigma_py_patcher.py \
-	${libdir}/enigma2/python/GlobalActions.py \
-	${libdir}/enigma2/python/keyids.py \
-	${libdir}/enigma2/python/keymapparser.py \
-	${libdir}/enigma2/python/Navigation.py \
-	${libdir}/enigma2/python/NavigationInstance.py \
-	${libdir}/enigma2/python/PowerTimer.py \
-	${libdir}/enigma2/python/RecordTimer.py \
-	${libdir}/enigma2/python/ServiceReference.py \
-	${libdir}/enigma2/python/skin.py \
-	${libdir}/enigma2/python/timer.py \
-	${libdir}/enigma2/python/upgrade.py \
-	${libdir}/enigma2/python/*/*.py \
-	${libdir}/enigma2/python/*/*/*.py \
-	${libdir}/enigma2/python/*/*/*/*.py \
 	"
 
 do_install:append() {

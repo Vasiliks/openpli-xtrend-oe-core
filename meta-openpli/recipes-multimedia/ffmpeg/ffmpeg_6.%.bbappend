@@ -1,5 +1,7 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
+PR = "r3"
+
 SRC_URI += "file://0002-fix-mpegts.patch \
             file://0003-allow-to-choose-rtmp-impl-at-runtime.patch \
             file://0004-hls-replace-key-uri.patch \
@@ -12,11 +14,12 @@ SRC_URI += "file://0002-fix-mpegts.patch \
             file://0012-dxva2.patch \
             file://0013-add-av_stream_get_first_dts-for-chromium.patch \
             file://ffmpeg_ac4.patch \
-           "
+            "
 
-PACKAGECONFIG:append = " gpl libbluray libfreetype librtmp libxml2 openssl x264"
+PACKAGECONFIG:append = " gpl libbluray dav1d libfreetype librtmp libxml2 openssl x264"
 
 PACKAGECONFIG[libbluray] = "--enable-libbluray --enable-protocol=bluray,--disable-libbluray,libbluray"
+PACKAGECONFIG[dav1d] = "--enable-libdav1d,--disable-libdav1d,dav1d"
 PACKAGECONFIG[libfreetype] = "--enable-libfreetype,--disable-libfreetype,freetype"
 PACKAGECONFIG[librtmp] = "--enable-librtmp,--disable-librtmp,librtmp rtmpdump"
 PACKAGECONFIG[libv4l2] = "--enable-libv4l2,--disable-libv4l2,v4l-utils"
@@ -81,8 +84,8 @@ EXTRA_FFCONF = " \
     --enable-encoder=png \
     --enable-encoder=rawvideo \
     --enable-encoder=wmav2 \
-    --disable-decoder=truehd \
-    --disable-decoder=mlp \
+    --enable-decoder=truehd \
+    --enable-decoder=mlp \
     \
     --disable-debug \
     --disable-doc \
@@ -95,3 +98,5 @@ EXTRA_FFCONF = " \
     ${@bb.utils.contains("TARGET_ARCH", "arm", "--enable-armv6 --enable-armv6t2 --enable-vfp --enable-neon", "", d)} \
     ${@bb.utils.contains("TUNE_FEATURES", "aarch64", "--enable-armv8 --enable-vfp --enable-neon", "", d)} \
 "
+
+BBCLASSEXTEND = "native"
